@@ -343,6 +343,7 @@
     for (let x = 0; x <= W; x += 40) {
       ctx.lineTo(x, gy + 24 + Math.sin((x / W) * Math.PI * 3) * 14);
     }
+    ctx.lineTo(W, gy + 24);   // land exactly on the right edge (no seam)
     ctx.lineTo(W, H);
     ctx.closePath();
     ctx.fill();
@@ -633,11 +634,22 @@
     ctx.beginPath(); ctx.moveTo(mx, bot); ctx.lineTo(mx, bot - h * meterShown); ctx.stroke();
     // cloud at the top
     ctx.fillStyle = "#fff"; cloudShape(mx, top - 14, 0.5); ctx.fill();
-    // climbing pig marker
+    // climbing pig marker (drawn, so it always renders — no emoji font needed)
     const py = bot - h * meterShown;
-    ctx.font = "20px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText("🐷", mx, py);
-    ctx.textAlign = "start";
+    ctx.fillStyle = "#ff9ecb";
+    for (const sgn of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(mx + sgn * 5, py - 6);
+      ctx.lineTo(mx + sgn * 10, py - 13);
+      ctx.lineTo(mx + sgn * 2, py - 9);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(mx, py, 9, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#ff86bd";
+    ctx.beginPath(); ctx.ellipse(mx, py + 2, 4, 3, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = "#4a2b3a";
+    ctx.beginPath(); ctx.arc(mx - 3, py - 2, 1.4, 0, TAU); ctx.arc(mx + 3, py - 2, 1.4, 0, TAU); ctx.fill();
   }
 
   // ---------------------------------------------------------------- render

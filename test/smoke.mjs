@@ -148,7 +148,7 @@ if (/⭐\s*\d/.test(stars) && parseInt(stars.replace(/\D/g, ""), 10) > 0) ok("co
 else fail("no treasures were collected (expected some): '" + stars + "'");
 
 // sanity: a healthy spread of canvas ops were exercised
-const need = ["fillRect", "beginPath", "arc", "ellipse", "fill", "moveTo", "lineTo", "save", "restore", "translate", "rotate", "fillText", "stroke"];
+const need = ["fillRect", "beginPath", "arc", "ellipse", "fill", "moveTo", "lineTo", "save", "restore", "translate", "rotate", "stroke"];
 const missing = need.filter((m) => !usedOps.has(m));
 if (missing.length === 0) ok(`canvas draw API exercised (${usedOps.size} distinct ops, incl. all core ones)`);
 else fail("expected canvas ops never called: " + missing.join(", "));
