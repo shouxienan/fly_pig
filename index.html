@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+
+  <title>Piggy Can Fly!</title>
+  <meta name="description" content="A gentle musical flying game for little ones." />
+
+  <!-- PWA / Add-to-Home-Screen -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#ff8fc7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Piggy Fly" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="icons/icon-180.png" />
+  <link rel="icon" type="image/png" href="icons/icon-192.png" />
+</head>
+<body>
+  <div id="game">
+    <canvas id="c"></canvas>
+
+    <!-- Little counter of collected treasures (top-left) -->
+    <div id="hud" aria-hidden="true"></div>
+
+    <!-- Start screen -->
+    <div id="start" class="overlay">
+      <div class="panel">
+        <div class="big-emoji">🐷</div>
+        <h1>Piggy Can Fly!</h1>
+        <p class="sub">Tap the sky to help piggy fly up to the clouds ☁️</p>
+        <button id="startBtn" class="bigbtn">TAP TO PLAY</button>
+      </div>
+    </div>
+
+    <!-- Win screen -->
+    <div id="win" class="overlay hidden">
+      <div class="panel">
+        <div class="big-emoji">🎉🐷🌈</div>
+        <h1>You did it!</h1>
+        <p class="sub">Piggy touched the clouds! ☁️✨</p>
+        <button id="againBtn" class="bigbtn">PLAY AGAIN</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="audio.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
