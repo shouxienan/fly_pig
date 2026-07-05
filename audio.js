@@ -93,7 +93,7 @@
         this.master.connect(this.ctx.destination);
 
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = 0.16;
+        this.musicGain.gain.value = 0.5;   // melody is now the main tap sound
         this.musicGain.connect(this.master);
 
         this.sfxGain = this.ctx.createGain();
@@ -157,14 +157,20 @@
       return midiToFreq(this.keyRoot + deg + oct);
     }
 
-    // Each flap plays the next note up the scale -> a rising, hopeful melody.
+    // Each tap plays the NEXT note of the current nursery tune, so the child
+    // "plays" the song by tapping. Loops back to the start after the last note.
     flap() {
       if (!this.ctx) return;
-      const f = this.noteFreq(this.flapStep);
-      this.flapStep = (this.flapStep + 1) % (PENTA.length * 2);
-      const t = this.ctx.currentTime;
-      this.tone(f, t, 0.45, 0.5, "triangle");
-      this.tone(f * 2, t, 0.3, 0.14, "sine"); // shimmer octave
+      if (!this.song) this.song = SONGS[0];
+      const notes = this.song.notes;
+      for (let i = 0; i < notes.length; i++) {
+        const note = notes[this._noteIndex];
+        this._noteIndex = (this._noteIndex + 1) % notes.length;
+        if (note.n && note.n !== "R") {
+          this._melodyNote(noteToFreq(note.n), this.ctx.currentTime + 0.005, 0.5);
+          return;
+        }
+      }
     }
 
     // Bright sparkle for collecting a treasure.
@@ -200,29 +206,8 @@
       }
     }
 
-    // Play the current nursery melody with a soft music-box tone, looping gently.
-    startMusic() {
-      if (!this.ctx || this._musicOn) return;
-      if (!this.song) this.song = SONGS[0];
-      this._musicOn = true;
-      this._noteIndex = 0;
-      this._scheduleNext();
-    }
-
-    _scheduleNext() {
-      if (!this._musicOn || !this.ctx) return;
-      const s = this.song;
-      const beat = 60 / (s.bpm || 100);
-      if (this._noteIndex >= s.notes.length) {
-        this._noteIndex = 0;
-        this._musicTimer = setTimeout(() => this._scheduleNext(), 1000); // breathe, then loop
-        return;
-      }
-      const note = s.notes[this._noteIndex++];
-      const dur = note.b * beat;
-      if (note.n && note.n !== "R") this._melodyNote(noteToFreq(note.n), this.ctx.currentTime + 0.03, dur * 0.95);
-      this._musicTimer = setTimeout(() => this._scheduleNext(), dur * 1000);
-    }
+    // Background music is OFF — the child plays the tune tap-by-tap (see flap()).
+    startMusic() {}
 
     _melodyNote(freq, t, dur) {
       const c = this.ctx;
@@ -254,12 +239,13 @@
       if (this._musicTimer) { clearTimeout(this._musicTimer); this._musicTimer = null; }
     }
 
-    // Pick a fresh key + nursery song so every adventure sounds new.
+    // Pick a fresh key + nursery song, and start the tune from its first note.
     randomizeKey() {
       const roots = [57, 60, 62, 64, 65, 67]; // A3, C4, D4, E4, F4, G4
       this.keyRoot = roots[Math.floor(Math.random() * roots.length)];
       this.flapStep = 0;
       this.song = SONGS[Math.floor(Math.random() * SONGS.length)];
+      this._noteIndex = 0;
     }
   }
 

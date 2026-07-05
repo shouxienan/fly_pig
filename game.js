@@ -282,7 +282,7 @@
     // gentle self-hop when resting (shows piggy "trying very hard")
     if (pig.worldY === 0 && !holding) {
       idleTimer += dt;
-      if (idleTimer > 1.1) { pig.vy = -FLAP * 0.7; pig.wingV = 16; pig.squish = 0.85; audio.flap(); idleTimer = 0; }
+      if (idleTimer > 1.1) { pig.vy = -FLAP * 0.7; pig.wingV = 16; pig.squish = 0.85; audio.bounce(); idleTimer = 0; }
     }
 
     // horizontal drift toward last tap
@@ -324,7 +324,6 @@
         updateHud();
         pig.vy -= 90;                      // little reward boost
         audio.collect();
-        if (it.type === "note") audio.flap();
         spawnBurst(ix, iy, it.type === "heart" ? "heart" : "star");
       }
     }
