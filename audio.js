@@ -157,20 +157,51 @@
       return midiToFreq(this.keyRoot + deg + oct);
     }
 
-    // Each tap plays the NEXT note of the current nursery tune, so the child
-    // "plays" the song by tapping. Loops back to the start after the last note.
-    flap() {
+    // Press: start (and sustain) the NEXT note of the tune. Release ends it, so
+    // the note's length = how long the tap is held. Loops after the last note.
+    noteDown() {
       if (!this.ctx) return;
       if (!this.song) this.song = SONGS[0];
       const notes = this.song.notes;
       for (let i = 0; i < notes.length; i++) {
         const note = notes[this._noteIndex];
         this._noteIndex = (this._noteIndex + 1) % notes.length;
-        if (note.n && note.n !== "R") {
-          this._melodyNote(noteToFreq(note.n), this.ctx.currentTime + 0.005, 0.5);
-          return;
-        }
+        if (note.n && note.n !== "R") { this._startNote(noteToFreq(note.n)); return; }
       }
+    }
+
+    noteUp() { this._endNote(0.1); }
+
+    _startNote(freq) {
+      this._endNote(0.03); // cut any previous note cleanly
+      const c = this.ctx, t = c.currentTime;
+      const mk = (f, peak) => {
+        const osc = c.createOscillator();
+        const g = c.createGain();
+        osc.type = "sine";
+        osc.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(peak, t + 0.02);          // attack
+        g.gain.exponentialRampToValueAtTime(peak * 0.04, t + 2.6);    // slow decay if held a long time
+        osc.connect(g); g.connect(this.musicGain);
+        osc.start(t); osc.stop(t + 2.8);
+        return { osc, g };
+      };
+      this._note = [mk(freq, 0.6), mk(freq * 2, 0.14)]; // note + gentle octave shimmer
+    }
+
+    _endNote(rel) {
+      if (!this._note) return;
+      const c = this.ctx, t = c.currentTime, r = rel == null ? 0.1 : rel;
+      for (const v of this._note) {
+        try {
+          v.g.gain.cancelScheduledValues(t);
+          v.g.gain.setValueAtTime(Math.max(v.g.gain.value || 0.0001, 0.0001), t);
+          v.g.gain.exponentialRampToValueAtTime(0.0001, t + r);
+          v.osc.stop(t + r + 0.03);
+        } catch (e) {}
+      }
+      this._note = null;
     }
 
     // Bright sparkle for collecting a treasure.
@@ -206,33 +237,8 @@
       }
     }
 
-    // Background music is OFF — the child plays the tune tap-by-tap (see flap()).
+    // Background music is OFF — the child plays the tune tap-by-tap (see noteDown).
     startMusic() {}
-
-    _melodyNote(freq, t, dur) {
-      const c = this.ctx;
-      const atk = 0.015, rel = Math.min(0.3, dur * 0.5), hold = Math.max(atk, dur - rel);
-      const osc = c.createOscillator();
-      const g = c.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, t);
-      g.gain.exponentialRampToValueAtTime(0.6, t + atk);
-      g.gain.setValueAtTime(0.6, t + hold);
-      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-      osc.connect(g); g.connect(this.musicGain);
-      osc.start(t); osc.stop(t + dur + 0.05);
-      // gentle shimmer an octave up
-      const osc2 = c.createOscillator();
-      const g2 = c.createGain();
-      osc2.type = "sine";
-      osc2.frequency.value = freq * 2;
-      g2.gain.setValueAtTime(0.0001, t);
-      g2.gain.exponentialRampToValueAtTime(0.12, t + atk);
-      g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.8);
-      osc2.connect(g2); g2.connect(this.musicGain);
-      osc2.start(t); osc2.stop(t + dur + 0.05);
-    }
 
     stopMusic() {
       this._musicOn = false;

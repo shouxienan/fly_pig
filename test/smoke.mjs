@@ -66,7 +66,7 @@ let timers = [];
 let timerSeq = 0;
 const winHandlers = {}, docHandlers = {};
 
-class FakeParam { constructor() { this.value = 0; } setValueAtTime() {} exponentialRampToValueAtTime() {} }
+class FakeParam { constructor() { this.value = 0; } setValueAtTime() {} exponentialRampToValueAtTime() {} cancelScheduledValues() {} }
 class FakeAudioCtx {
   constructor() { this.state = "running"; this.destination = {}; }
   get currentTime() { return nowMs / 1000; }
@@ -139,13 +139,16 @@ catch (e) { fail("preview render threw: " + e.stack); }
 els.startBtn.fire("click", {});
 ok("PLAY pressed");
 
-// hold the finger down and fly (toddler press-and-hold) for ~6 seconds
+// tap at a realistic toddler rate (~3.5 taps/sec) — holding no longer lifts.
+// This also checks difficulty: a modest tapper must still reach the clouds.
+let taps = 0, gframe = 0;
 try {
-  tapDown();
-  step(400); // ~6.4s at 16ms
-  ok("400 gameplay frames ran without throwing");
+  for (; gframe < 1600 && els.win.classList.contains("hidden"); gframe++) {
+    if (gframe % 18 === 0) { tapDown(); tapUp(); taps++; }
+    step(1);
+  }
+  ok(`gameplay ran without throwing (${taps} taps, ${gframe} frames)`);
 } catch (e) { fail("gameplay threw: " + e.stack); }
-tapUp();
 
 // let it settle / celebrate
 try { step(120); ok("post-climb frames (incl. win celebration) ran without throwing"); }

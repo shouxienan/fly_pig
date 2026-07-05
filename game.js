@@ -66,10 +66,9 @@
   let state = State.START;
 
   const TARGET = 2600;          // how high (world px) to reach the clouds
-  const GRAVITY = 620;          // gentle pull
-  const FLAP = 400;             // upward velocity added per flap
-  const HOLD_LIFT = 900;        // extra lift while finger is held down
-  const MAX_FALL = 520;
+  const GRAVITY = 520;          // soft pull so piggy floats between taps
+  const FLAP = 460;             // upward velocity set per tap
+  const MAX_FALL = 460;
 
   let pal = PALETTES[0];
   let goalType = "rainbow";
@@ -157,7 +156,7 @@
     pig.wingV = 22;
     pig.squish = 0.82;
     if (px != null) pig.targetX = clamp(px, 40, W - 40);
-    audio.flap();
+    audio.noteDown();          // start the next note (held for as long as the tap)
     // little puff of sparkles under piggy
     spawnSparkles(pig.x, pig.worldY - camTop + 34, 5, pal.accent);
     idleTimer = 0;
@@ -182,7 +181,7 @@
     const p = pointerXY(e);
     pig.targetX = clamp(p.x, 40, W - 40);
   }
-  function onUp() { holding = false; }
+  function onUp() { holding = false; audio.noteUp(); }
 
   canvas.addEventListener("touchstart", onDown, { passive: false });
   canvas.addEventListener("touchmove", onMove, { passive: false });
@@ -268,7 +267,6 @@
 
     // physics
     pig.vy += GRAVITY * dt;
-    if (holding) pig.vy -= HOLD_LIFT * dt;   // holding gives a soft continuous lift
     pig.vy = clamp(pig.vy, -700, MAX_FALL);
     pig.worldY += pig.vy * dt;
 
