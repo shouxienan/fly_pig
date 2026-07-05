@@ -1,5 +1,5 @@
 /* Service worker: makes the game installable and playable offline. */
-const CACHE = "piggy-fly-v1";
+const CACHE = "piggy-fly-v2";
 
 // Paths are relative to the service worker's scope (the app folder),
 // so this works whether hosted at a domain root or a /pig_fly/ subpath.
