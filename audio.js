@@ -14,6 +14,25 @@
     return 440 * Math.pow(2, (m - 69) / 12);
   }
 
+  // Build a tiny silent WAV data URI at runtime (no asset file). Playing this
+  // in a loop on the first tap moves iOS to a *media* audio session, so game
+  // sound plays even when the ring/silent switch is off and the volume buttons
+  // control it.
+  function silentWavUri() {
+    const rate = 8000, n = Math.floor(rate * 0.25);
+    const buf = new Uint8Array(44 + n);
+    const dv = new DataView(buf.buffer);
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+    str(0, "RIFF"); dv.setUint32(4, 36 + n, true); str(8, "WAVE");
+    str(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, rate, true); dv.setUint32(28, rate, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+    str(36, "data"); dv.setUint32(40, n, true);
+    for (let i = 0; i < n; i++) buf[44 + i] = 128; // 8-bit PCM silence
+    let bin = ""; for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+    return "data:audio/wav;base64," + btoa(bin);
+  }
+
+
   class AudioEngine {
     constructor() {
       this.ctx = null;
@@ -28,29 +47,54 @@
 
     // Must be called from inside a user gesture (first tap) on iOS.
     init() {
-      if (this.ctx) {
-        if (this.ctx.state === "suspended") this.ctx.resume();
-        return;
+      if (!this.ctx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) { this.enabled = false; return; }
+        this.ctx = new AC();
+
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.9;
+        this.master.connect(this.ctx.destination);
+
+        this.musicGain = this.ctx.createGain();
+        this.musicGain.gain.value = 0.10;
+        this.musicGain.connect(this.master);
+
+        this.sfxGain = this.ctx.createGain();
+        this.sfxGain.gain.value = 0.55;
+        this.sfxGain.connect(this.master);
+
+        // Prime Web Audio with a 1-sample silent buffer (some browsers stay
+        // muted until a sound is started inside the first gesture).
+        try {
+          const b = this.ctx.createBuffer(1, 1, 22050);
+          const s = this.ctx.createBufferSource();
+          s.buffer = b; s.connect(this.ctx.destination); s.start(0);
+        } catch (e) {}
       }
-      const AC = window.AudioContext || window.webkitAudioContext;
-      if (!AC) { this.enabled = false; return; }
-      this.ctx = new AC();
+      if (this.ctx.state === "suspended") this.ctx.resume();
+      this.unlockMediaSession();
+    }
 
-      this.master = this.ctx.createGain();
-      this.master.gain.value = 0.9;
-      this.master.connect(this.ctx.destination);
-
-      this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = 0.10;
-      this.musicGain.connect(this.master);
-
-      this.sfxGain = this.ctx.createGain();
-      this.sfxGain.gain.value = 0.55;
-      this.sfxGain.connect(this.master);
+    // iOS: keep a looping silent element playing so audio uses the media
+    // session (audible on silent mode; follows the media volume slider).
+    unlockMediaSession() {
+      if (this._silent) { const p = this._silent.play(); if (p && p.catch) p.catch(() => {}); return; }
+      try {
+        const a = new Audio(silentWavUri());
+        a.loop = true;
+        a.setAttribute("playsinline", "");
+        a.playsInline = true;
+        a.volume = 0.02;
+        const p = a.play();
+        if (p && p.catch) p.catch(() => {});
+        this._silent = a;
+      } catch (e) {}
     }
 
     resume() {
       if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
+      this.unlockMediaSession();
     }
 
     // A soft plucked/bell tone with a quick decay.
