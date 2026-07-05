@@ -1,5 +1,7 @@
-/* Service worker: makes the game installable and playable offline. */
-const CACHE = "piggy-fly-v4";
+/* Service worker: makes the game installable and playable offline.
+ * Network-first: when online you always get the latest build; when offline
+ * it falls back to the cached copy. (Cache-first made updates hard to see.) */
+const CACHE = "piggy-fly-v5";
 
 // Paths are relative to the service worker's scope (the app folder),
 // so this works whether hosted at a domain root or a /pig_fly/ subpath.
@@ -32,17 +34,17 @@ self.addEventListener("activate", (e) => {
 
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  if (new URL(e.request.url).origin !== self.location.origin) return; // let cross-origin pass through
+  // Network-first: fetch fresh, update the cache, fall back to cache offline.
   e.respondWith(
-    caches.match(e.request).then((hit) => {
-      if (hit) return hit;
-      return fetch(e.request).then((res) => {
-        // Cache same-origin successful responses for next time.
-        if (res.ok && new URL(e.request.url).origin === self.location.origin) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(e.request, copy));
-        }
-        return res;
-      }).catch(() => hit);
-    })
+    fetch(e.request).then((res) => {
+      if (res && res.ok) {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy));
+      }
+      return res;
+    }).catch(() =>
+      caches.match(e.request).then((hit) => hit || caches.match("./index.html"))
+    )
   );
 });
