@@ -32,6 +32,39 @@
     return "data:audio/wav;base64," + btoa(bin);
   }
 
+  // --- nursery melodies -----------------------------------------------------
+  const NOTE_SEMI = { C: 0, "C#": 1, D: 2, "D#": 3, E: 4, F: 5, "F#": 6, G: 7, "G#": 8, A: 9, "A#": 10, B: 11 };
+  function noteToFreq(name) {
+    const m = /^([A-G]#?)(\d)$/.exec(name);
+    if (!m) return 440;
+    return midiToFreq(12 * (parseInt(m[2], 10) + 1) + NOTE_SEMI[m[1]]);
+  }
+  // "C4 C4 G4:2 R" -> [{n:'C4',b:1}, ...]; ":x" sets beats (default 1), R = rest.
+  function song(name, bpm, notes) {
+    return {
+      name, bpm,
+      notes: notes.trim().split(/\s+/).map((tok) => {
+        const p = tok.split(":");
+        return { n: p[0], b: p[1] ? parseFloat(p[1]) : 1 };
+      }),
+    };
+  }
+  const SONGS = [
+    song("Twinkle Twinkle Little Star", 112,
+      "C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2 G4 G4 F4 F4 E4 E4 D4:2 G4 G4 F4 F4 E4 E4 D4:2 C4 C4 G4 G4 A4 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2"),
+    song("Mary Had a Little Lamb", 120,
+      "E4 D4 C4 D4 E4 E4 E4:2 D4 D4 D4:2 E4 G4 G4:2 E4 D4 C4 D4 E4 E4 E4 E4 D4 D4 E4 D4 C4:2"),
+    song("Row Row Row Your Boat", 104,
+      "C4 C4 C4 D4 E4:2 E4 D4 E4 F4 G4:2 C5:0.5 C5:0.5 C5:0.5 G4:0.5 G4:0.5 G4:0.5 E4:0.5 E4:0.5 E4:0.5 C4:0.5 C4:0.5 C4:0.5 G4 F4 E4 D4 C4:2"),
+    song("Happy Birthday", 108,
+      "G4:0.5 G4:0.5 A4 G4 C5 B4:2 G4:0.5 G4:0.5 A4 G4 D5 C5:2 G4:0.5 G4:0.5 G5 E5 C5 B4 A4:2 F5:0.5 F5:0.5 E5 C5 D5 C5:2"),
+    song("Old MacDonald Had a Farm", 116,
+      "G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:2 D4 G4 G4 G4 D4 E4 E4 D4:2 B4 B4 A4 A4 G4:2"),
+    song("Baa Baa Black Sheep", 112,
+      "C4 C4 G4 G4 A4 B4 C5 A4 G4:2 F4 F4 E4 E4 D4 D4 C4:2"),
+  ];
+
+
 
   class AudioEngine {
     constructor() {
@@ -41,7 +74,10 @@
       this.sfxGain = null;
       this.keyRoot = 60;        // MIDI root note (C4); randomized per adventure
       this.flapStep = 0;        // climbs with each flap -> ascending melody
-      this.musicTimer = null;
+      this.song = null;         // current nursery melody
+      this._musicTimer = null;
+      this._musicOn = false;
+      this._noteIndex = 0;
       this.enabled = true;
     }
 
@@ -57,7 +93,7 @@
         this.master.connect(this.ctx.destination);
 
         this.musicGain = this.ctx.createGain();
-        this.musicGain.gain.value = 0.10;
+        this.musicGain.gain.value = 0.16;
         this.musicGain.connect(this.master);
 
         this.sfxGain = this.ctx.createGain();
@@ -164,31 +200,66 @@
       }
     }
 
-    // Slow, low, gentle background arpeggio loop.
+    // Play the current nursery melody with a soft music-box tone, looping gently.
     startMusic() {
-      if (!this.ctx || this.musicTimer) return;
-      let step = 0;
-      const chord = [0, 4, 7, 12, 7, 4]; // gently rolling tonic chord
-      const beat = () => {
-        if (!this.ctx) return;
-        const s = chord[step % chord.length];
-        const t = this.ctx.currentTime;
-        this.tone(midiToFreq(this.keyRoot - 12 + s), t, 1.6, 0.5, "sine", this.musicGain);
-        step++;
-      };
-      beat();
-      this.musicTimer = setInterval(beat, 620);
+      if (!this.ctx || this._musicOn) return;
+      if (!this.song) this.song = SONGS[0];
+      this._musicOn = true;
+      this._noteIndex = 0;
+      this._scheduleNext();
+    }
+
+    _scheduleNext() {
+      if (!this._musicOn || !this.ctx) return;
+      const s = this.song;
+      const beat = 60 / (s.bpm || 100);
+      if (this._noteIndex >= s.notes.length) {
+        this._noteIndex = 0;
+        this._musicTimer = setTimeout(() => this._scheduleNext(), 1000); // breathe, then loop
+        return;
+      }
+      const note = s.notes[this._noteIndex++];
+      const dur = note.b * beat;
+      if (note.n && note.n !== "R") this._melodyNote(noteToFreq(note.n), this.ctx.currentTime + 0.03, dur * 0.95);
+      this._musicTimer = setTimeout(() => this._scheduleNext(), dur * 1000);
+    }
+
+    _melodyNote(freq, t, dur) {
+      const c = this.ctx;
+      const atk = 0.015, rel = Math.min(0.3, dur * 0.5), hold = Math.max(atk, dur - rel);
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t + atk);
+      g.gain.setValueAtTime(0.6, t + hold);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g); g.connect(this.musicGain);
+      osc.start(t); osc.stop(t + dur + 0.05);
+      // gentle shimmer an octave up
+      const osc2 = c.createOscillator();
+      const g2 = c.createGain();
+      osc2.type = "sine";
+      osc2.frequency.value = freq * 2;
+      g2.gain.setValueAtTime(0.0001, t);
+      g2.gain.exponentialRampToValueAtTime(0.12, t + atk);
+      g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.8);
+      osc2.connect(g2); g2.connect(this.musicGain);
+      osc2.start(t); osc2.stop(t + dur + 0.05);
     }
 
     stopMusic() {
-      if (this.musicTimer) { clearInterval(this.musicTimer); this.musicTimer = null; }
+      this._musicOn = false;
+      if (this._musicTimer) { clearTimeout(this._musicTimer); this._musicTimer = null; }
     }
 
-    // Pick a fresh musical key so every adventure sounds new.
+    // Pick a fresh key + nursery song so every adventure sounds new.
     randomizeKey() {
       const roots = [57, 60, 62, 64, 65, 67]; // A3, C4, D4, E4, F4, G4
       this.keyRoot = roots[Math.floor(Math.random() * roots.length)];
       this.flapStep = 0;
+      this.song = SONGS[Math.floor(Math.random() * SONGS.length)];
     }
   }
 

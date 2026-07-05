@@ -62,6 +62,8 @@ const els = { c: canvasEl, hud: makeEl(), start: makeEl(), win: makeEl(), startB
 // ---- mock window / document / audio ----
 let nowMs = 0;
 let rafCb = null;
+let timers = [];
+let timerSeq = 0;
 const winHandlers = {}, docHandlers = {};
 
 class FakeParam { constructor() { this.value = 0; } setValueAtTime() {} exponentialRampToValueAtTime() {} }
@@ -78,6 +80,7 @@ const sandbox = {
   Math, JSON, Date, // Date only used indirectly; fine here
   document: {
     getElementById: (id) => els[id],
+    querySelectorAll: () => [],
     addEventListener: (t, fn) => { (docHandlers[t] ||= []).push(fn); },
     hidden: false,
   },
@@ -85,8 +88,8 @@ const sandbox = {
   performance: { now: () => nowMs },
   requestAnimationFrame: (cb) => { rafCb = cb; return 1; },
   cancelAnimationFrame: () => {},
-  setTimeout: (cb) => { cb(); return 1; },
-  clearTimeout: () => {},
+  setTimeout: (cb, ms) => { timerSeq++; timers.push({ id: timerSeq, cb, due: nowMs + (ms || 0) }); return timerSeq; },
+  clearTimeout: (id) => { timers = timers.filter((t) => t.id !== id); },
   setInterval: () => 1,   // don't actually loop the background music
   clearInterval: () => {},
   AudioContext: FakeAudioCtx,
@@ -112,7 +115,19 @@ try {
   process.exit(1);
 }
 
-const step = (n = 1) => { for (let i = 0; i < n; i++) { nowMs += 16; const cb = rafCb; rafCb = null; if (cb) cb(nowMs); } };
+// Fake timers keyed off the same clock as the frame loop, so the looping
+// nursery-music scheduler advances correctly instead of recursing forever.
+function fireTimers() {
+  let guard = 0;
+  for (;;) {
+    const due = timers.filter((t) => t.due <= nowMs).sort((a, b) => a.due - b.due);
+    if (!due.length || guard++ > 10000) break;
+    const t = due[0];
+    timers = timers.filter((x) => x.id !== t.id);
+    t.cb();
+  }
+}
+const step = (n = 1) => { for (let i = 0; i < n; i++) { nowMs += 16; fireTimers(); const cb = rafCb; rafCb = null; if (cb) cb(nowMs); } };
 const tapDown = (x = 195, y = 400) => canvasEl.fire("mousedown", { preventDefault() {}, clientX: x, clientY: y });
 const tapUp = () => (winHandlers.mouseup || []).forEach((fn) => fn({}));
 

@@ -29,6 +29,17 @@
 
   const GOALS = ["rainbow", "castle", "sun", "bigstar"];
 
+  // Selectable flyers. Each is a variation on a round head: body colours, ear
+  // style ("tri" upright / "side" round / "floppy" down), nose type, extras.
+  const ANIMALS = {
+    pig:   { grad: ["#ffc0e0", "#ff9ecb"], ear: "tri",    earCol: "#ff9ecb", blush: "rgba(255,110,160,0.55)", nose: "pig",   snoutCol: "#ff86bd", nostril: "#e85fa0", smile: "#c94f86" },
+    cow:   { grad: ["#ffffff", "#f1f0f4"], ear: "side",   earCol: "#f6cfe0", blush: "rgba(255,150,180,0.45)", nose: "cow",   snoutCol: "#ffc6de", nostril: "#df8fb4", smile: "#9a7d86", spots: true, horns: true },
+    dog:   { grad: ["#f2c589", "#e0a25c"], ear: "floppy", earCol: "#cf9048", blush: "rgba(210,130,90,0.35)",  nose: "dog",   noseCol: "#5a3b2a", smile: "#5a3b2a", tongue: true },
+    cat:   { grad: ["#dcc9f2", "#c3a9e6"], ear: "tri",    earCol: "#b79ad9", blush: "rgba(255,150,180,0.45)", nose: "cat",   noseCol: "#e07da0", smile: "#6b5a86", whiskers: true },
+    horse: { grad: ["#e3b98a", "#c8955a"], ear: "tri",    earCol: "#b87f46", blush: "rgba(200,130,80,0.35)",  nose: "horse", snoutCol: "#ecca9c", nostril: "#9c6b3f", smile: "#6b4a2a", mane: true, forelock: true },
+  };
+  const ANIMAL_ORDER = ["pig", "cow", "dog", "cat", "horse"];
+
   // ---------------------------------------------------------------- canvas
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d");
@@ -64,6 +75,10 @@
   let goalType = "rainbow";
   let camTop = 0;               // world Y at top of screen
   let time = 0;
+
+  // Which animal the child is flying (remembered between visits).
+  let selectedAnimal = "pig";
+  try { const a = localStorage.getItem("piggy-animal"); if (a && ANIMALS[a]) selectedAnimal = a; } catch (e) {}
 
   const pig = {
     worldY: 0, vy: 0, x: 0, targetX: 0, tilt: 0,
@@ -188,12 +203,30 @@
     audio.resume();
     newAdventure();
     state = State.PLAY;
+    audio.stopMusic();
     audio.startMusic();
     document.getElementById("start").classList.add("hidden");
     document.getElementById("win").classList.add("hidden");
   }
   document.getElementById("startBtn").addEventListener("click", startGame);
   document.getElementById("againBtn").addEventListener("click", startGame);
+
+  // Animal picker on the start screen (changes the flyer live in the preview).
+  function updatePicker() {
+    document.querySelectorAll(".animal").forEach((b) => {
+      b.classList.toggle("selected", b.dataset.animal === selectedAnimal);
+    });
+  }
+  document.querySelectorAll(".animal").forEach((b) => {
+    b.addEventListener("click", () => {
+      if (!ANIMALS[b.dataset.animal]) return;
+      selectedAnimal = b.dataset.animal;
+      try { localStorage.setItem("piggy-animal", selectedAnimal); } catch (e) {}
+      updatePicker();
+      audio.init(); // tapping a picker is a user gesture -> unlock audio early
+    });
+  });
+  updatePicker();
 
   // ---------------------------------------------------------------- particles
   function spawnSparkles(x, y, n, col) {
@@ -535,8 +568,9 @@
     }
   }
 
-  // The star of the show: a round pink piggy with flapping wings.
-  function drawPig() {
+  // The star of the show: the chosen animal, with little flapping wings.
+  function drawCharacter() {
+    const cfg = ANIMALS[selectedAnimal] || ANIMALS.pig;
     const x = pig.x;
     const y = pig.worldY - camTop;
     const wingBeat = Math.sin(pig.wing) * 0.9;
@@ -563,49 +597,121 @@
       ctx.restore();
     }
 
-    // ears
-    ctx.fillStyle = "#ff9ecb";
-    for (const sgn of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(sgn * 20, -34);
-      ctx.lineTo(sgn * 34, -50);
-      ctx.lineTo(sgn * 38, -30);
-      ctx.closePath();
-      ctx.fill();
+    // horse mane (behind head)
+    if (cfg.mane) {
+      ctx.fillStyle = "#8a5a34";
+      ctx.beginPath(); ctx.ellipse(0, -32, 18, 22, 0, 0, TAU); ctx.fill();
     }
+    // cow horns (behind head)
+    if (cfg.horns) {
+      ctx.fillStyle = "#f5e6c8";
+      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 15, -38, 5, 8, sgn * 0.4, 0, TAU); ctx.fill(); }
+    }
+
+    drawEars(cfg);
 
     // body/head
     const grad = ctx.createLinearGradient(0, -40, 0, 40);
-    grad.addColorStop(0, "#ffc0e0");
-    grad.addColorStop(1, "#ff9ecb");
+    grad.addColorStop(0, cfg.grad[0]);
+    grad.addColorStop(1, cfg.grad[1]);
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.ellipse(0, 0, 42, 38, 0, 0, TAU); ctx.fill();
 
+    // cow patches
+    if (cfg.spots) {
+      ctx.fillStyle = "rgba(90,80,90,0.26)";
+      ctx.beginPath(); ctx.ellipse(-22, -14, 12, 9, 0.5, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(25, 12, 9, 7, -0.3, 0, TAU); ctx.fill();
+    }
+
     // cheeks (blush)
-    ctx.fillStyle = "rgba(255,110,160,0.55)";
-    ctx.beginPath(); ctx.arc(-22, 8, 8, 0, TAU); ctx.arc(22, 8, 8, 0, TAU); ctx.fill();
+    ctx.fillStyle = cfg.blush;
+    ctx.beginPath(); ctx.arc(-23, 9, 8, 0, TAU); ctx.arc(23, 9, 8, 0, TAU); ctx.fill();
+
+    // horse forelock (tuft of mane on the forehead)
+    if (cfg.forelock) {
+      ctx.fillStyle = "#8a5a34";
+      ctx.beginPath(); ctx.ellipse(0, -30, 10, 13, 0, 0, TAU); ctx.fill();
+    }
 
     // eyes (blink)
     const open = pig.blink > 0 ? 0.2 : 1;
-    ctx.fillStyle = "#4a2b3a";
+    ctx.fillStyle = "#3a2630";
     for (const sgn of [-1, 1]) {
       ctx.beginPath();
       ctx.ellipse(sgn * 14, -6, 5, 6 * open, 0, 0, TAU);
       ctx.fill();
-      if (open > 0.5) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(sgn * 16, -8, 2, 0, TAU); ctx.fill(); ctx.fillStyle = "#4a2b3a"; }
+      if (open > 0.5) { ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(sgn * 16, -8, 2, 0, TAU); ctx.fill(); ctx.fillStyle = "#3a2630"; }
     }
 
-    // snout
-    ctx.fillStyle = "#ff86bd";
-    ctx.beginPath(); ctx.ellipse(0, 12, 15, 11, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = "#e85fa0";
-    ctx.beginPath(); ctx.arc(-5, 12, 2.6, 0, TAU); ctx.arc(5, 12, 2.6, 0, TAU); ctx.fill();
-
-    // happy smile
-    ctx.strokeStyle = "#c94f86"; ctx.lineWidth = 2.5; ctx.lineCap = "round";
-    ctx.beginPath(); ctx.arc(0, 18, 9, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    drawNose(cfg);
 
     ctx.restore();
+  }
+
+  function drawEars(cfg) {
+    ctx.fillStyle = cfg.earCol;
+    if (cfg.ear === "side") {
+      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 40, -6, 12, 9, sgn * 0.5, 0, TAU); ctx.fill(); }
+    } else if (cfg.ear === "floppy") {
+      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 36, 6, 12, 24, sgn * 0.3, 0, TAU); ctx.fill(); }
+    } else { // "tri" upright
+      for (const sgn of [-1, 1]) {
+        ctx.beginPath();
+        ctx.moveTo(sgn * 20, -34);
+        ctx.lineTo(sgn * 34, -52);
+        ctx.lineTo(sgn * 38, -30);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+  }
+
+  function drawNose(cfg) {
+    ctx.lineCap = "round";
+    if (cfg.nose === "pig") {
+      ctx.fillStyle = cfg.snoutCol;
+      ctx.beginPath(); ctx.ellipse(0, 12, 15, 11, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = cfg.nostril;
+      ctx.beginPath(); ctx.arc(-5, 12, 2.6, 0, TAU); ctx.arc(5, 12, 2.6, 0, TAU); ctx.fill();
+      ctx.strokeStyle = cfg.smile; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(0, 22, 8, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    } else if (cfg.nose === "cow") {
+      ctx.fillStyle = cfg.snoutCol;
+      ctx.beginPath(); ctx.ellipse(0, 15, 20, 13, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = cfg.nostril;
+      ctx.beginPath(); ctx.ellipse(-8, 15, 3, 4, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(8, 15, 3, 4, 0, 0, TAU); ctx.fill();
+    } else if (cfg.nose === "horse") {
+      ctx.fillStyle = cfg.snoutCol;
+      ctx.beginPath(); ctx.ellipse(0, 19, 13, 19, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = cfg.nostril;
+      ctx.beginPath(); ctx.ellipse(-5, 22, 2.4, 4, 0, 0, TAU); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(5, 22, 2.4, 4, 0, 0, TAU); ctx.fill();
+    } else if (cfg.nose === "dog") {
+      ctx.fillStyle = "rgba(255,255,255,0.22)";
+      ctx.beginPath(); ctx.ellipse(0, 17, 14, 11, 0, 0, TAU); ctx.fill();
+      ctx.fillStyle = cfg.noseCol;
+      ctx.beginPath(); ctx.ellipse(0, 8, 6, 4.5, 0, 0, TAU); ctx.fill();
+      ctx.strokeStyle = cfg.smile; ctx.lineWidth = 2.2;
+      ctx.beginPath(); ctx.moveTo(0, 12); ctx.lineTo(0, 18); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-6, 18, 6, 0, 0.6 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(6, 18, 6, 0.4 * Math.PI, Math.PI); ctx.stroke();
+      if (cfg.tongue) { ctx.fillStyle = "#ff7a9c"; ctx.beginPath(); ctx.ellipse(0, 25, 4, 6, 0, 0, TAU); ctx.fill(); }
+    } else if (cfg.nose === "cat") {
+      ctx.fillStyle = cfg.noseCol;
+      ctx.beginPath(); ctx.moveTo(-4, 8); ctx.lineTo(4, 8); ctx.lineTo(0, 13); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = cfg.smile; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(0, 13); ctx.lineTo(0, 16); ctx.stroke();
+      ctx.beginPath(); ctx.arc(-5, 16, 5, 0, 0.55 * Math.PI); ctx.stroke();
+      ctx.beginPath(); ctx.arc(5, 16, 5, 0.45 * Math.PI, Math.PI); ctx.stroke();
+      if (cfg.whiskers) {
+        ctx.strokeStyle = "rgba(120,100,120,0.6)"; ctx.lineWidth = 1.4;
+        for (const sgn of [-1, 1]) for (const dy of [-3, 1, 5]) {
+          ctx.beginPath(); ctx.moveTo(sgn * 11, 9 + dy * 0.5); ctx.lineTo(sgn * 31, 7 + dy); ctx.stroke();
+        }
+      }
+    }
   }
 
   function drawParticles() {
@@ -634,9 +740,10 @@
     ctx.beginPath(); ctx.moveTo(mx, bot); ctx.lineTo(mx, bot - h * meterShown); ctx.stroke();
     // cloud at the top
     ctx.fillStyle = "#fff"; cloudShape(mx, top - 14, 0.5); ctx.fill();
-    // climbing pig marker (drawn, so it always renders — no emoji font needed)
+    // climbing marker in the chosen animal's colour (drawn, no emoji needed)
+    const cfg = ANIMALS[selectedAnimal] || ANIMALS.pig;
     const py = bot - h * meterShown;
-    ctx.fillStyle = "#ff9ecb";
+    ctx.fillStyle = cfg.earCol;
     for (const sgn of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(mx + sgn * 5, py - 6);
@@ -645,10 +752,11 @@
       ctx.closePath();
       ctx.fill();
     }
+    ctx.fillStyle = cfg.grad[1];
     ctx.beginPath(); ctx.arc(mx, py, 9, 0, TAU); ctx.fill();
-    ctx.fillStyle = "#ff86bd";
+    ctx.fillStyle = cfg.snoutCol || cfg.noseCol || "#e85fa0";
     ctx.beginPath(); ctx.ellipse(mx, py + 2, 4, 3, 0, 0, TAU); ctx.fill();
-    ctx.fillStyle = "#4a2b3a";
+    ctx.fillStyle = "#3a2630";
     ctx.beginPath(); ctx.arc(mx - 3, py - 2, 1.4, 0, TAU); ctx.arc(mx + 3, py - 2, 1.4, 0, TAU); ctx.fill();
   }
 
@@ -660,7 +768,7 @@
     drawDecorations();
     drawGround();
     drawItems();
-    drawPig();
+    drawCharacter();
     drawParticles();
     if (state === State.PLAY) drawMeter();
   }

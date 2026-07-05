@@ -102,11 +102,51 @@ h1 {
 .sub {
   font-size: clamp(15px, 4.4vw, 22px);
   color: #a65a86;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   max-width: 22ch;
   margin-left: auto;
   margin-right: auto;
 }
+
+.pick-label {
+  font-size: clamp(13px, 3.8vw, 17px);
+  color: #a65a86;
+  margin-bottom: 8px;
+}
+
+#picker {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+
+.animal {
+  font-family: inherit;
+  font-size: clamp(26px, 8vw, 38px);
+  width: clamp(50px, 15vw, 62px);
+  height: clamp(50px, 15vw, 62px);
+  line-height: 1;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background: #fff0f7;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: manipulation;
+  transition: transform 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+
+.animal.selected {
+  border-color: var(--pink-deep);
+  background: #ffe0ef;
+  transform: scale(1.12);
+  box-shadow: 0 4px 14px rgba(255, 95, 174, 0.4);
+}
+
+.animal:active { transform: scale(0.94); }
 
 .bigbtn {
   font-family: inherit;
