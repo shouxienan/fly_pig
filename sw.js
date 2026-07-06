@@ -1,7 +1,7 @@
 /* Service worker: makes the game installable and playable offline.
  * Network-first: when online you always get the latest build; when offline
  * it falls back to the cached copy. (Cache-first made updates hard to see.) */
-const CACHE = "piggy-fly-v7";
+const CACHE = "piggy-fly-v8";
 
 // Paths are relative to the service worker's scope (the app folder),
 // so this works whether hosted at a domain root or a /pig_fly/ subpath.

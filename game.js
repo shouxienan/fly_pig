@@ -17,14 +17,13 @@
   const TAU = Math.PI * 2;
 
   // ---------------------------------------------------------------- palettes
-  // Soft, girly colour schemes. One is chosen at random each adventure.
+  // Painterly, Zelda-ish sky+land sets. Blue-sky day plus soft dawn/dusk variants.
   const PALETTES = [
-    { name: "cotton candy", top: "#ffc3e6", bot: "#fff2fb", ground: "#ffd0ea", accent: "#ff5fae", cloud: "#ffffff", hill: "#ffb3dd" },
-    { name: "lavender",     top: "#d7c6ff", bot: "#f6f0ff", ground: "#e6dcff", accent: "#9b6bff", cloud: "#ffffff", hill: "#c3aaff" },
-    { name: "peach",        top: "#ffcbb3", bot: "#fff3ec", ground: "#ffe0cf", accent: "#ff7d54", cloud: "#fff7f2", hill: "#ffbfa0" },
-    { name: "mint rose",    top: "#bfeede", bot: "#fff0f6", ground: "#d7f3ea", accent: "#ff6fae", cloud: "#ffffff", hill: "#a8e6d3" },
-    { name: "bubblegum",    top: "#ffb0d8", bot: "#ffe6f3", ground: "#ffc4e2", accent: "#ff3d97", cloud: "#ffffff", hill: "#ff9bcd" },
-    { name: "sunset blush", top: "#ffc0d3", bot: "#ffeecb", ground: "#ffd6b0", accent: "#ff6f91", cloud: "#fff6ea", hill: "#ffb28f" }
+    { name: "hyrule day",   skyTop: "#3fa4ef", skyMid: "#8fd0ff", skyHorizon: "#dcf1ff", sun: "#fff6d8", cloud: "#ffffff", cloudShade: "#c7dcee", hillNear: "#5fb552", hillFar: "#93cf7e", mountain: "#a7c3d8", flower: "#fff2a8", accent: "#ff5fae" },
+    { name: "dawn blush",   skyTop: "#ff9fc4", skyMid: "#ffc9dd", skyHorizon: "#fff0e2", sun: "#fff0d2", cloud: "#fff6fb", cloudShade: "#e6bfd2", hillNear: "#6fbb5f", hillFar: "#a3d18b", mountain: "#c8b4cf", flower: "#fff2a8", accent: "#ff4fa4" },
+    { name: "golden sunset",skyTop: "#ff9f66", skyMid: "#ffca86", skyHorizon: "#fff2c8", sun: "#fff2c0", cloud: "#fff3e8", cloudShade: "#e3b28c", hillNear: "#559b4b", hillFar: "#84bd6c", mountain: "#bb9c88", flower: "#fff0a0", accent: "#ff7d54" },
+    { name: "lavender dusk",skyTop: "#8f7ad2", skyMid: "#c2a7e6", skyHorizon: "#f2e4f6", sun: "#ffe6d2", cloud: "#f7f0fb", cloudShade: "#c6acd6", hillNear: "#5b9a6a", hillFar: "#8dbf9d", mountain: "#a99bc6", flower: "#fff0c4", accent: "#9b6bff" },
+    { name: "fresh morning",skyTop: "#4ec3bd", skyMid: "#a3e6d7", skyHorizon: "#ecfff7", sun: "#fff6d2", cloud: "#ffffff", cloudShade: "#c3e2d9", hillNear: "#66bd66", hillFar: "#97d091", mountain: "#a6c8c0", flower: "#fff2a8", accent: "#ff6fae" }
   ];
 
   const GOALS = ["rainbow", "castle", "sun", "bigstar"];
@@ -32,11 +31,11 @@
   // Selectable flyers. Each is a variation on a round head: body colours, ear
   // style ("tri" upright / "side" round / "floppy" down), nose type, extras.
   const ANIMALS = {
-    pig:   { grad: ["#ffc0e0", "#ff9ecb"], ear: "tri",    earCol: "#ff9ecb", blush: "rgba(255,110,160,0.55)", nose: "pig",   snoutCol: "#ff86bd", nostril: "#e85fa0", smile: "#c94f86" },
-    cow:   { grad: ["#ffffff", "#f1f0f4"], ear: "side",   earCol: "#f6cfe0", blush: "rgba(255,150,180,0.45)", nose: "cow",   snoutCol: "#ffc6de", nostril: "#df8fb4", smile: "#9a7d86", spots: true, horns: true },
-    dog:   { grad: ["#f2c589", "#e0a25c"], ear: "floppy", earCol: "#cf9048", blush: "rgba(210,130,90,0.35)",  nose: "dog",   noseCol: "#5a3b2a", smile: "#5a3b2a", tongue: true },
-    cat:   { grad: ["#dcc9f2", "#c3a9e6"], ear: "tri",    earCol: "#b79ad9", blush: "rgba(255,150,180,0.45)", nose: "cat",   noseCol: "#e07da0", smile: "#6b5a86", whiskers: true },
-    horse: { grad: ["#e3b98a", "#c8955a"], ear: "tri",    earCol: "#b87f46", blush: "rgba(200,130,80,0.35)",  nose: "horse", snoutCol: "#ecca9c", nostril: "#9c6b3f", smile: "#6b4a2a", mane: true, forelock: true },
+    pig:   { grad: ["#ffc0e0", "#ff9ecb"], wing: "#ffd0e8", outline: "#e07bae", ear: "tri",    earCol: "#ff9ecb", blush: "rgba(255,110,160,0.55)", nose: "pig",   snoutCol: "#ff86bd", nostril: "#e85fa0", smile: "#c94f86" },
+    cow:   { grad: ["#f3f3f8", "#dedee8"], wing: "#eceef4", outline: "#b9bccb", ear: "side",   earCol: "#f6cfe0", blush: "rgba(255,150,180,0.45)", nose: "cow",   snoutCol: "#ffc6de", nostril: "#df8fb4", smile: "#9a7d86", spots: true, horns: true },
+    dog:   { grad: ["#f2c589", "#e0a25c"], wing: "#f4cf98", outline: "#b87b3c", ear: "floppy", earCol: "#cf9048", blush: "rgba(210,130,90,0.35)",  nose: "dog",   noseCol: "#5a3b2a", smile: "#5a3b2a", tongue: true },
+    cat:   { grad: ["#dcc9f2", "#c3a9e6"], wing: "#e4d6f5", outline: "#9a7fc4", ear: "tri",    earCol: "#b79ad9", blush: "rgba(255,150,180,0.45)", nose: "cat",   noseCol: "#e07da0", smile: "#6b5a86", whiskers: true },
+    horse: { grad: ["#e3b98a", "#c8955a"], wing: "#eccba0", outline: "#9c6b3f", ear: "tri",    earCol: "#b87f46", blush: "rgba(200,130,80,0.35)",  nose: "horse", snoutCol: "#ecca9c", nostril: "#9c6b3f", smile: "#6b4a2a", mane: true, forelock: true },
   };
   const ANIMAL_ORDER = ["pig", "cow", "dog", "cat", "horse"];
 
@@ -93,6 +92,7 @@
   let clouds = [];       // {y, x, s, spd} parallax background
   let decorations = [];  // {y, xf, type, s, hue}
   let items = [];        // collectibles {y, xf, type, got, bob}
+  let flowers = [];      // wildflowers on the meadow {xf, dy, s, white}
   let particles = [];    // {x, y, vx, vy, life, max, kind, col, s, rot, rotV}
 
   const hud = document.getElementById("hud");
@@ -140,6 +140,12 @@
       items.push({ y: iy, xf: side, type: pick(itemTypes), got: false, bob: rand(0, TAU) });
       side = clamp(side + rand(-0.35, 0.35), 0.18, 0.82);
       iy -= rand(150, 240);
+    }
+
+    // Wildflowers dotted across the meadow near the ground.
+    flowers = [];
+    for (let i = 0; i < 20; i++) {
+      flowers.push({ xf: rand(0.02, 0.98), dy: rand(14, 430), s: rand(1.1, 2.3), white: Math.random() < 0.45 });
     }
 
     updateHud();
@@ -273,7 +279,7 @@
     // floor (a fluffy meadow) — piggy bounces, never falls off, never gives up
     if (pig.worldY > 0) {
       pig.worldY = 0;
-      if (pig.vy > 160) { audio.bounce(); pig.squish = 0.7; spawnSparkles(pig.x, H * 0.55 + 30, 6, pal.hill); }
+      if (pig.vy > 160) { audio.bounce(); pig.squish = 0.7; spawnSparkles(pig.x, H * 0.55 + 30, 6, pal.hillNear); }
       pig.vy = 0;
     }
 
@@ -354,58 +360,130 @@
   }
 
   // ---------------------------------------------------------------- drawing
-  function drawSky() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, pal.top);
-    g.addColorStop(1, pal.bot);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
+  // hex "#rrggbb" -> "rgba(r,g,b,a)"
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
   }
 
-  function drawGround() {
-    const gy = 0 - camTop; // world y=0 in screen space
-    if (gy > H + 40) return;
-    // rolling meadow
-    ctx.fillStyle = pal.ground;
-    ctx.beginPath();
-    ctx.moveTo(0, H);
-    ctx.lineTo(0, gy + 24);
-    for (let x = 0; x <= W; x += 40) {
-      ctx.lineTo(x, gy + 24 + Math.sin((x / W) * Math.PI * 3) * 14);
-    }
-    ctx.lineTo(W, gy + 24);   // land exactly on the right edge (no seam)
-    ctx.lineTo(W, H);
-    ctx.closePath();
-    ctx.fill();
-    // little hills
-    ctx.fillStyle = pal.hill;
-    for (let i = 0; i < 4; i++) {
-      const hx = (i + 0.5) * (W / 4);
-      ctx.beginPath();
-      ctx.arc(hx, gy + 40, 70, Math.PI, 0);
-      ctx.fill();
-    }
+  function drawSky() {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, pal.skyTop);
+    g.addColorStop(0.55, pal.skyMid);
+    g.addColorStop(1, pal.skyHorizon);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    // warm sun glow high in the sky (ambient light, fixed on screen)
+    const sx = W * 0.76, sy = H * 0.15, R = Math.max(W, H) * 0.95;
+    const rg = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
+    rg.addColorStop(0, rgba(pal.sun, 0.55));
+    rg.addColorStop(0.35, rgba(pal.sun, 0.14));
+    rg.addColorStop(1, rgba(pal.sun, 0));
+    ctx.fillStyle = rg;
+    ctx.fillRect(0, 0, W, H);
   }
 
   function cloudShape(x, y, s) {
     ctx.beginPath();
     ctx.arc(x - 34 * s, y, 26 * s, 0, TAU);
-    ctx.arc(x, y - 14 * s, 34 * s, 0, TAU);
-    ctx.arc(x + 34 * s, y, 28 * s, 0, TAU);
-    ctx.arc(x, y + 8 * s, 30 * s, 0, TAU);
+    ctx.arc(x - 8 * s, y - 18 * s, 30 * s, 0, TAU);
+    ctx.arc(x + 26 * s, y - 10 * s, 26 * s, 0, TAU);
+    ctx.arc(x + 40 * s, y + 2 * s, 22 * s, 0, TAU);
+    ctx.arc(x + 6 * s, y + 8 * s, 30 * s, 0, TAU);
     ctx.closePath();
   }
 
+  // Cel-shaded clouds: soft shadow underside, lit body, bright top highlight.
   function drawClouds() {
     for (const c of clouds) {
-      const y = c.y - camTop * c.spd;    // parallax
-      const yy = ((y % (H + 400)) + (H + 400)) % (H + 400) - 200;
-      ctx.globalAlpha = 0.85;
+      const y = c.y - camTop * c.spd; // parallax
+      const yy = ((y % (H + 500)) + (H + 500)) % (H + 500) - 250;
+      const depth = clamp(0.45 + c.spd, 0.4, 1); // farther (slow) clouds fainter
+      ctx.globalAlpha = 0.45 * depth;
+      ctx.fillStyle = pal.cloudShade;
+      cloudShape(c.x, yy + 9 * c.s, c.s); ctx.fill();
+      ctx.globalAlpha = 0.95 * depth;
       ctx.fillStyle = pal.cloud;
-      cloudShape(c.x, yy, c.s);
-      ctx.fill();
+      cloudShape(c.x, yy, c.s); ctx.fill();
+      ctx.globalAlpha = 0.5 * depth;
+      ctx.fillStyle = "#ffffff";
+      cloudShape(c.x, yy - 7 * c.s, c.s * 0.82); ctx.fill();
       ctx.globalAlpha = 1;
     }
+  }
+
+  // Wavy filled ridge from screen bottom up to a wavy crest line.
+  function ridge(baseY, amp, freq, phase) {
+    ctx.beginPath();
+    ctx.moveTo(0, H + 2);
+    ctx.lineTo(0, baseY);
+    for (let x = 0; x <= W; x += 16) ctx.lineTo(x, baseY - Math.sin((x / W) * Math.PI * freq + phase) * amp);
+    ctx.lineTo(W, baseY);
+    ctx.lineTo(W, H + 2);
+    ctx.closePath();
+  }
+  function crest(baseY, amp, freq, phase) {
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 16) {
+      const yy = baseY - Math.sin((x / W) * Math.PI * freq + phase) * amp;
+      ctx[x ? "lineTo" : "moveTo"](x, yy);
+    }
+  }
+
+  function drawFlowers(gy) {
+    for (const f of flowers) {
+      const fy = gy + f.dy;
+      if (fy < gy - 2 || fy > H) continue;
+      const fx = f.xf * W, s = f.s;
+      ctx.fillStyle = f.white ? "#ffffff" : pal.flower;
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * TAU;
+        ctx.beginPath(); ctx.arc(fx + Math.cos(a) * 3 * s, fy + Math.sin(a) * 3 * s, 2 * s, 0, TAU); ctx.fill();
+      }
+      ctx.fillStyle = "#ffd54f";
+      ctx.beginPath(); ctx.arc(fx, fy, 1.7 * s, 0, TAU); ctx.fill();
+    }
+  }
+
+  // Lush Zelda-style meadow: hazy mountains, layered green hills, wildflowers.
+  function drawGround() {
+    const gy = 0 - camTop; // world y=0 in screen space (the horizon)
+    if (gy > H + 240) return;
+
+    // atmospheric haze band at the horizon
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = pal.skyHorizon;
+    ctx.fillRect(0, gy - 60, W, 84);
+    ctx.globalAlpha = 1;
+
+    // distant hazy mountains
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = pal.mountain;
+    for (let i = 0; i < 4; i++) {
+      const mx = (i * 0.9 + 0.25) * (W / 3.2);
+      const h = 72 + (i % 2) * 34;
+      ctx.beginPath();
+      ctx.moveTo(mx - 150, gy + 8);
+      ctx.lineTo(mx, gy - h);
+      ctx.lineTo(mx + 150, gy + 8);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // far hill layer, then near meadow
+    ctx.fillStyle = pal.hillFar;
+    ridge(gy + 2, 26, 2.3, 0.6); ctx.fill();
+    ctx.fillStyle = pal.hillNear;
+    ridge(gy + 28, 18, 3.1, 2.1); ctx.fill();
+
+    // sunlit rim on the near crest
+    ctx.strokeStyle = rgba("#ffffff", 0.28);
+    ctx.lineWidth = 3; ctx.lineCap = "round";
+    crest(gy + 28, 18, 3.1, 2.1); ctx.stroke();
+
+    drawFlowers(gy);
   }
 
   function drawStar(x, y, r, col, points) {
@@ -578,19 +656,23 @@
     else ctx.rotate(pig.tilt * 0.5);
     ctx.scale(1, pig.squish);
 
-    // soft shadow/glow
-    ctx.fillStyle = "rgba(255,120,180,0.18)";
-    ctx.beginPath(); ctx.ellipse(0, 6, 46, 42, 0, 0, TAU); ctx.fill();
+    // soft grounded drop shadow
+    ctx.fillStyle = "rgba(40,40,70,0.14)";
+    ctx.beginPath(); ctx.ellipse(0, 10, 44, 38, 0, 0, TAU); ctx.fill();
 
-    // wings (behind body), flapping
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    // wings (behind body), flapping — the CHARACTER's own colour + outline so
+    // they never blend into the sky or clouds
     for (const sgn of [-1, 1]) {
       ctx.save();
       ctx.translate(sgn * 30, -6);
       ctx.rotate(sgn * (0.5 + wingBeat));
       ctx.beginPath();
       ctx.ellipse(sgn * 16, 0, 22, 12, 0, 0, TAU);
-      ctx.fill();
+      ctx.fillStyle = cfg.wing; ctx.fill();
+      ctx.strokeStyle = cfg.outline; ctx.lineWidth = 2; ctx.stroke();
+      // a couple of feather lines for detail
+      ctx.strokeStyle = rgba("#ffffff", 0.4); ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(sgn * 6, -2); ctx.lineTo(sgn * 30, -2); ctx.stroke();
       ctx.restore();
     }
 
@@ -607,12 +689,17 @@
 
     drawEars(cfg);
 
-    // body/head
-    const grad = ctx.createLinearGradient(0, -40, 0, 40);
+    // body/head — cel shading: light comes from upper-left, dark outline
+    const grad = ctx.createRadialGradient(-15, -16, 6, 0, 2, 54);
     grad.addColorStop(0, cfg.grad[0]);
     grad.addColorStop(1, cfg.grad[1]);
     ctx.fillStyle = grad;
     ctx.beginPath(); ctx.ellipse(0, 0, 42, 38, 0, 0, TAU); ctx.fill();
+    ctx.strokeStyle = cfg.outline; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, 42, 38, 0, 0, TAU); ctx.stroke();
+    // soft rim light on the upper-left edge
+    ctx.strokeStyle = rgba("#ffffff", 0.5); ctx.lineWidth = 3.5; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.ellipse(0, 0, 40, 36, 0, Math.PI * 1.15, Math.PI * 1.72); ctx.stroke();
 
     // cow patches
     if (cfg.spots) {
@@ -648,10 +735,12 @@
 
   function drawEars(cfg) {
     ctx.fillStyle = cfg.earCol;
+    ctx.strokeStyle = cfg.outline;
+    ctx.lineWidth = 2;
     if (cfg.ear === "side") {
-      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 40, -6, 12, 9, sgn * 0.5, 0, TAU); ctx.fill(); }
+      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 40, -6, 12, 9, sgn * 0.5, 0, TAU); ctx.fill(); ctx.stroke(); }
     } else if (cfg.ear === "floppy") {
-      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 36, 6, 12, 24, sgn * 0.3, 0, TAU); ctx.fill(); }
+      for (const sgn of [-1, 1]) { ctx.beginPath(); ctx.ellipse(sgn * 36, 6, 12, 24, sgn * 0.3, 0, TAU); ctx.fill(); ctx.stroke(); }
     } else { // "tri" upright
       for (const sgn of [-1, 1]) {
         ctx.beginPath();
@@ -660,6 +749,7 @@
         ctx.lineTo(sgn * 38, -30);
         ctx.closePath();
         ctx.fill();
+        ctx.stroke();
       }
     }
   }
