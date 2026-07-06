@@ -89,7 +89,7 @@
         this.ctx = new AC();
 
         this.master = this.ctx.createGain();
-        this.master.gain.value = 0.9;
+        this.master.gain.value = this.muted ? 0 : 0.9;
         this.master.connect(this.ctx.destination);
 
         this.musicGain = this.ctx.createGain();
@@ -245,13 +245,52 @@
       if (this._musicTimer) { clearTimeout(this._musicTimer); this._musicTimer = null; }
     }
 
-    // Pick a fresh key + nursery song, and start the tune from its first note.
+    // Pick a fresh musical key (song is chosen separately via setSong).
     randomizeKey() {
       const roots = [57, 60, 62, 64, 65, 67]; // A3, C4, D4, E4, F4, G4
       this.keyRoot = roots[Math.floor(Math.random() * roots.length)];
       this.flapStep = 0;
-      this.song = SONGS[Math.floor(Math.random() * SONGS.length)];
+    }
+
+    songNames() { return SONGS.map((s) => s.name); }
+
+    // sel: "random" or a song index (number or numeric string).
+    setSong(sel) {
+      if (sel === "random" || sel == null) {
+        this.song = SONGS[Math.floor(Math.random() * SONGS.length)];
+      } else {
+        const i = parseInt(sel, 10);
+        this.song = SONGS[i >= 0 && i < SONGS.length ? i : 0];
+      }
       this._noteIndex = 0;
+    }
+
+    setMuted(m) {
+      this.muted = !!m;
+      if (this.master) this.master.gain.value = this.muted ? 0 : 0.9;
+    }
+
+    // Short taste of a song when picking it in settings.
+    previewSong(sel) {
+      this.setSong(sel);
+      if (!this.ctx) return;
+      const notes = this.song.notes.filter((n) => n.n && n.n !== "R").slice(0, 5);
+      let t = this.ctx.currentTime + 0.04;
+      for (const n of notes) { this._blip(noteToFreq(n.n), t, 0.3, 0.5); t += 0.32; }
+      this._noteIndex = 0;
+    }
+
+    _blip(freq, t, dur, peak) {
+      const c = this.ctx;
+      const osc = c.createOscillator();
+      const g = c.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak || 0.5, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g); g.connect(this.musicGain);
+      osc.start(t); osc.stop(t + dur + 0.03);
     }
   }
 

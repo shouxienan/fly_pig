@@ -27,19 +27,66 @@
     <!-- Little counter of collected treasures (top-left) -->
     <div id="hud" aria-hidden="true"></div>
 
-    <!-- Start screen -->
+    <!-- Start screen / settings -->
     <div id="start" class="overlay">
-      <div class="panel">
-        <div class="big-emoji">🐷</div>
+      <div class="panel settings-panel">
         <h1>Piggy Can Fly!</h1>
-        <p class="sub">Tap the sky to help your friend fly up to the clouds ☁️</p>
-        <p class="pick-label">Pick your flyer</p>
-        <div id="picker">
-          <button class="animal" data-animal="pig" aria-label="Pig">🐷</button>
-          <button class="animal" data-animal="cow" aria-label="Cow">🐮</button>
-          <button class="animal" data-animal="dog" aria-label="Dog">🐶</button>
-          <button class="animal" data-animal="cat" aria-label="Cat">🐱</button>
-          <button class="animal" data-animal="horse" aria-label="Horse">🐴</button>
+        <div class="settings">
+          <div class="setting">
+            <p class="pick-label">Flyer</p>
+            <div class="chip-group" data-setting="animal">
+              <button class="chip emoji" data-value="pig" aria-label="Pig">🐷</button>
+              <button class="chip emoji" data-value="cow" aria-label="Cow">🐮</button>
+              <button class="chip emoji" data-value="dog" aria-label="Dog">🐶</button>
+              <button class="chip emoji" data-value="cat" aria-label="Cat">🐱</button>
+              <button class="chip emoji" data-value="horse" aria-label="Horse">🐴</button>
+            </div>
+          </div>
+          <div class="setting">
+            <p class="pick-label">Song</p>
+            <div class="chip-group" data-setting="song">
+              <button class="chip" data-value="random">🎲 Surprise</button>
+              <button class="chip" data-value="0">Twinkle</button>
+              <button class="chip" data-value="1">Mary</button>
+              <button class="chip" data-value="2">Row Row</button>
+              <button class="chip" data-value="3">Birthday</button>
+              <button class="chip" data-value="4">Old MacDonald</button>
+              <button class="chip" data-value="5">Baa Baa</button>
+            </div>
+          </div>
+          <div class="setting">
+            <p class="pick-label">Sky</p>
+            <div class="chip-group" data-setting="sky">
+              <button class="chip" data-value="random">🎲 Surprise</button>
+              <button class="chip" data-value="day">Day</button>
+              <button class="chip" data-value="dawn">Dawn</button>
+              <button class="chip" data-value="sunset">Sunset</button>
+              <button class="chip" data-value="dusk">Dusk</button>
+              <button class="chip" data-value="morning">Morning</button>
+            </div>
+          </div>
+          <div class="setting">
+            <p class="pick-label">Adventure length</p>
+            <div class="chip-group" data-setting="length">
+              <button class="chip" data-value="short">Short</button>
+              <button class="chip" data-value="medium">Medium</button>
+              <button class="chip" data-value="long">Long</button>
+            </div>
+          </div>
+          <div class="setting">
+            <p class="pick-label">Flying</p>
+            <div class="chip-group" data-setting="flying">
+              <button class="chip" data-value="easy">Easy float</button>
+              <button class="chip" data-value="normal">Normal</button>
+            </div>
+          </div>
+          <div class="setting">
+            <p class="pick-label">Sound</p>
+            <div class="chip-group" data-setting="sound">
+              <button class="chip" data-value="on">🔊 On</button>
+              <button class="chip" data-value="off">🔇 Off</button>
+            </div>
+          </div>
         </div>
         <button id="startBtn" class="bigbtn">TAP TO PLAY</button>
       </div>
@@ -52,6 +99,7 @@
         <h1>You did it!</h1>
         <p class="sub">Piggy touched the clouds! ☁️✨</p>
         <button id="againBtn" class="bigbtn">PLAY AGAIN</button>
+        <button id="settingsBtn" class="minibtn">⚙︎ Settings</button>
       </div>
     </div>
   </div>

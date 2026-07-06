@@ -64,9 +64,9 @@
   const State = { START: 0, PLAY: 1, WIN: 2 };
   let state = State.START;
 
-  const TARGET = 2600;          // how high (world px) to reach the clouds
-  const GRAVITY = 520;          // soft pull so piggy floats between taps
-  const FLAP = 460;             // upward velocity set per tap
+  let TARGET = 2600;            // how high (world px) to reach the clouds (settings)
+  let GRAVITY = 440;            // soft pull so piggy floats between taps (settings)
+  let FLAP = 470;              // upward velocity set per tap (settings)
   const MAX_FALL = 460;
 
   let pal = PALETTES[0];
@@ -74,9 +74,28 @@
   let camTop = 0;               // world Y at top of screen
   let time = 0;
 
-  // Which animal the child is flying (remembered between visits).
+  // ---- customizable settings (remembered between visits) ----
+  const DEFAULTS = { animal: "pig", song: "random", sky: "random", length: "medium", flying: "easy", sound: "on" };
+  const LENGTHS = { short: 1500, medium: 2600, long: 4200 };
+  const FLYING = { easy: { g: 440, f: 470 }, normal: { g: 600, f: 450 } };
+  const SKY_BY_NAME = { day: 0, dawn: 1, sunset: 2, dusk: 3, morning: 4 };
+  let settings = { ...DEFAULTS };
+  try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem("piggy-settings") || "{}") }; } catch (e) {}
+
   let selectedAnimal = "pig";
-  try { const a = localStorage.getItem("piggy-animal"); if (a && ANIMALS[a]) selectedAnimal = a; } catch (e) {}
+
+  function saveSettings() {
+    try { localStorage.setItem("piggy-settings", JSON.stringify(settings)); } catch (e) {}
+  }
+
+  // Apply the current settings to the game knobs.
+  function applySettings() {
+    selectedAnimal = ANIMALS[settings.animal] ? settings.animal : "pig";
+    TARGET = LENGTHS[settings.length] || LENGTHS.medium;
+    const fl = FLYING[settings.flying] || FLYING.easy;
+    GRAVITY = fl.g; FLAP = fl.f;
+    audio.setMuted(settings.sound === "off");
+  }
 
   const pig = {
     worldY: 0, vy: 0, x: 0, targetX: 0, tilt: 0,
@@ -99,9 +118,12 @@
 
   // ---------------------------------------------------------------- adventure
   function newAdventure() {
-    pal = pick(PALETTES);
+    pal = (settings.sky !== "random" && SKY_BY_NAME[settings.sky] != null)
+      ? PALETTES[SKY_BY_NAME[settings.sky]]
+      : pick(PALETTES);
     goalType = pick(GOALS);
     audio.randomizeKey();
+    audio.setSong(settings.song);
 
     pig.worldY = 0; pig.vy = 0; pig.x = W / 2; pig.targetX = W / 2;
     pig.tilt = 0; pig.wing = 0; pig.wingV = 0; pig.squish = 1; pig.spin = 0;
@@ -206,6 +228,7 @@
   function startGame() {
     audio.init();
     audio.resume();
+    applySettings();
     newAdventure();
     state = State.PLAY;
     audio.stopMusic();
@@ -213,25 +236,47 @@
     document.getElementById("start").classList.add("hidden");
     document.getElementById("win").classList.add("hidden");
   }
+  function showSettings() {
+    state = State.START;
+    document.getElementById("win").classList.add("hidden");
+    document.getElementById("start").classList.remove("hidden");
+  }
   document.getElementById("startBtn").addEventListener("click", startGame);
   document.getElementById("againBtn").addEventListener("click", startGame);
+  document.getElementById("settingsBtn").addEventListener("click", showSettings);
 
-  // Animal picker on the start screen (changes the flyer live in the preview).
-  function updatePicker() {
-    document.querySelectorAll(".animal").forEach((b) => {
-      b.classList.toggle("selected", b.dataset.animal === selectedAnimal);
+  // ---- settings chips: generic picker for every .chip-group ----
+  function refreshChips() {
+    document.querySelectorAll(".chip-group").forEach((group) => {
+      const key = group.dataset.setting;
+      group.querySelectorAll(".chip").forEach((chip) => {
+        chip.classList.toggle("selected", String(chip.dataset.value) === String(settings[key]));
+      });
     });
   }
-  document.querySelectorAll(".animal").forEach((b) => {
-    b.addEventListener("click", () => {
-      if (!ANIMALS[b.dataset.animal]) return;
-      selectedAnimal = b.dataset.animal;
-      try { localStorage.setItem("piggy-animal", selectedAnimal); } catch (e) {}
-      updatePicker();
-      audio.init(); // tapping a picker is a user gesture -> unlock audio early
+  document.querySelectorAll(".chip-group").forEach((group) => {
+    const key = group.dataset.setting;
+    group.querySelectorAll(".chip").forEach((chip) => {
+      chip.addEventListener("click", () => {
+        settings[key] = chip.dataset.value;
+        saveSettings();
+        refreshChips();
+        applySettings();
+        audio.init(); // a tap is a user gesture -> unlock audio
+        // live feedback in the start-screen preview
+        if (key === "sky") {
+          pal = (settings.sky !== "random" && SKY_BY_NAME[settings.sky] != null)
+            ? PALETTES[SKY_BY_NAME[settings.sky]] : pick(PALETTES);
+        } else if (key === "song") {
+          audio.resume(); audio.previewSong(settings.song);
+        } else if (key === "sound") {
+          audio.setMuted(settings.sound === "off");
+          if (settings.sound === "on") { audio.resume(); audio.previewSong(settings.song); }
+        }
+      });
     });
   });
-  updatePicker();
+  refreshChips();
 
   // ---------------------------------------------------------------- particles
   function spawnSparkles(x, y, n, col) {
@@ -871,7 +916,8 @@
     requestAnimationFrame(frame);
   }
 
-  // Draw a friendly preview behind the start screen.
+  // Draw a friendly preview behind the start screen (using saved settings).
+  applySettings();
   newAdventure();
   requestAnimationFrame(frame);
 

@@ -57,7 +57,7 @@ function makeEl() {
 }
 
 const canvasEl = makeEl();
-const els = { c: canvasEl, hud: makeEl(), start: makeEl(), win: makeEl(), startBtn: makeEl(), againBtn: makeEl() };
+const els = { c: canvasEl, hud: makeEl(), start: makeEl(), win: makeEl(), startBtn: makeEl(), againBtn: makeEl(), settingsBtn: makeEl() };
 
 // ---- mock window / document / audio ----
 let nowMs = 0;
