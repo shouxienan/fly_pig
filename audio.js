@@ -7,9 +7,6 @@
 (function () {
   "use strict";
 
-  // Major pentatonic scale (semitone offsets), spanning a couple of octaves.
-  const PENTA = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
-
   function midiToFreq(m) {
     return 440 * Math.pow(2, (m - 69) / 12);
   }
@@ -73,11 +70,10 @@
       this.musicGain = null;
       this.sfxGain = null;
       this.keyRoot = 60;        // MIDI root note (C4); randomized per adventure
-      this.flapStep = 0;        // climbs with each flap -> ascending melody
       this.song = null;         // current nursery melody
-      this._musicTimer = null;
-      this._musicOn = false;
-      this._noteIndex = 0;
+      this._noteIndex = 0;      // position in the current song (advances per tap)
+      this._note = null;        // the currently-held sustained note (oscillators)
+      this.muted = false;
       this.enabled = true;
     }
 
@@ -151,12 +147,6 @@
       osc.stop(t + (dur || 0.4) + 0.05);
     }
 
-    noteFreq(step) {
-      const deg = PENTA[((step % PENTA.length) + PENTA.length) % PENTA.length];
-      const oct = Math.floor(step / PENTA.length) * 12;
-      return midiToFreq(this.keyRoot + deg + oct);
-    }
-
     // Press: start (and sustain) the NEXT note of the tune. Release ends it, so
     // the note's length = how long the tap is held. Loops after the last note.
     noteDown() {
@@ -170,38 +160,46 @@
       }
     }
 
-    noteUp() { this._endNote(0.1); }
+    noteUp() { this._endNote(0.12); }
 
     _startNote(freq) {
       this._endNote(0.03); // cut any previous note cleanly
       const c = this.ctx, t = c.currentTime;
-      const mk = (f, peak) => {
-        const osc = c.createOscillator();
-        const g = c.createGain();
-        osc.type = "sine";
-        osc.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(peak, t + 0.02);          // attack
-        g.gain.exponentialRampToValueAtTime(peak * 0.04, t + 2.6);    // slow decay if held a long time
-        osc.connect(g); g.connect(this.musicGain);
-        osc.start(t); osc.stop(t + 2.8);
-        return { osc, g };
-      };
-      this._note = [mk(freq, 0.6), mk(freq * 2, 0.14)]; // note + gentle octave shimmer
+      const voices = [];
+      try {
+        for (const [f, peak] of [[freq, 0.6], [freq * 2, 0.14]]) {
+          const osc = c.createOscillator();
+          const g = c.createGain();
+          osc.type = "sine";
+          osc.frequency.value = f;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(peak, t + 0.02);          // click-free attack
+          g.gain.setTargetAtTime(peak * 0.55, t + 0.02, 0.9);           // gentle decay to a sustain level while held
+          osc.connect(g); g.connect(this.musicGain);
+          osc.start(t);
+          osc.stop(t + 10);                                            // safety cap well beyond any real tap-hold
+          voices.push({ osc, g });
+        }
+        this._note = voices;
+      } catch (e) {
+        // partial failure: stop whatever already started so nothing is orphaned
+        for (const v of voices) { try { v.osc.stop(); } catch (e2) {} }
+        this._note = null;
+      }
     }
 
     _endNote(rel) {
       if (!this._note) return;
-      const c = this.ctx, t = c.currentTime, r = rel == null ? 0.1 : rel;
-      for (const v of this._note) {
+      const voices = this._note;
+      this._note = null;
+      const c = this.ctx, t = c.currentTime, r = rel == null ? 0.12 : rel;
+      for (const v of voices) {
         try {
           v.g.gain.cancelScheduledValues(t);
-          v.g.gain.setValueAtTime(Math.max(v.g.gain.value || 0.0001, 0.0001), t);
-          v.g.gain.exponentialRampToValueAtTime(0.0001, t + r);
-          v.osc.stop(t + r + 0.03);
+          v.g.gain.setTargetAtTime(0.0001, t, r / 3); // smooth release from the param's current value
+          v.osc.stop(t + r + 0.06);
         } catch (e) {}
       }
-      this._note = null;
     }
 
     // Bright sparkle for collecting a treasure.
@@ -237,22 +235,11 @@
       }
     }
 
-    // Background music is OFF — the child plays the tune tap-by-tap (see noteDown).
-    startMusic() {}
-
-    stopMusic() {
-      this._musicOn = false;
-      if (this._musicTimer) { clearTimeout(this._musicTimer); this._musicTimer = null; }
-    }
-
     // Pick a fresh musical key (song is chosen separately via setSong).
     randomizeKey() {
       const roots = [57, 60, 62, 64, 65, 67]; // A3, C4, D4, E4, F4, G4
       this.keyRoot = roots[Math.floor(Math.random() * roots.length)];
-      this.flapStep = 0;
     }
-
-    songNames() { return SONGS.map((s) => s.name); }
 
     // sel: "random" or a song index (number or numeric string).
     setSong(sel) {

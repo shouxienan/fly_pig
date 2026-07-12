@@ -66,7 +66,7 @@ let timers = [];
 let timerSeq = 0;
 const winHandlers = {}, docHandlers = {};
 
-class FakeParam { constructor() { this.value = 0; } setValueAtTime() {} exponentialRampToValueAtTime() {} cancelScheduledValues() {} }
+class FakeParam { constructor() { this.value = 0; } setValueAtTime() {} exponentialRampToValueAtTime() {} setTargetAtTime() {} cancelScheduledValues() {} }
 class FakeAudioCtx {
   constructor() { this.state = "running"; this.destination = {}; }
   get currentTime() { return nowMs / 1000; }

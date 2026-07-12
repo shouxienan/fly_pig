@@ -1,7 +1,7 @@
 /* Service worker: makes the game installable and playable offline.
  * Network-first: when online you always get the latest build; when offline
  * it falls back to the cached copy. (Cache-first made updates hard to see.) */
-const CACHE = "piggy-fly-v9";
+const CACHE = "piggy-fly-v10";
 
 // Paths are relative to the service worker's scope (the app folder),
 // so this works whether hosted at a domain root or a /pig_fly/ subpath.
@@ -19,8 +19,12 @@ const ASSETS = [
 ];
 
 self.addEventListener("install", (e) => {
+  // Precache each asset independently so one bad/missing path can't fail the
+  // whole install (which would leave no offline support at all).
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      .then((c) => Promise.allSettled(ASSETS.map((a) => c.add(a))))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -35,16 +39,19 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   if (new URL(e.request.url).origin !== self.location.origin) return; // let cross-origin pass through
-  // Network-first: fetch fresh, update the cache, fall back to cache offline.
+  const fallback = () =>
+    caches.match(e.request).then((hit) => hit || (e.request.mode === "navigate" ? caches.match("./index.html") : undefined));
+  // Network-first: fetch fresh, update the cache, fall back to cache when the
+  // network fails OR returns a broken (non-ok) response, e.g. a bad deploy.
   e.respondWith(
     fetch(e.request).then((res) => {
       if (res && res.ok) {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));
+        return res;
       }
-      return res;
-    }).catch(() =>
-      caches.match(e.request).then((hit) => hit || caches.match("./index.html"))
-    )
+      // Reachable but broken (404/500/503): prefer a good cached copy if we have one.
+      return fallback().then((hit) => hit || res);
+    }).catch(fallback)
   );
 });

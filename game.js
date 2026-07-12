@@ -18,12 +18,14 @@
 
   // ---------------------------------------------------------------- palettes
   // Painterly, Zelda-ish sky+land sets. Blue-sky day plus soft dawn/dusk variants.
+  // `key` matches the settings chip data-value so a sky is resolved by identity
+  // (not array position) — reordering PALETTES can't mismap a chosen sky.
   const PALETTES = [
-    { name: "hyrule day",   skyTop: "#3fa4ef", skyMid: "#8fd0ff", skyHorizon: "#dcf1ff", sun: "#fff6d8", cloud: "#ffffff", cloudShade: "#c7dcee", hillNear: "#5fb552", hillFar: "#93cf7e", mountain: "#a7c3d8", flower: "#fff2a8", accent: "#ff5fae" },
-    { name: "dawn blush",   skyTop: "#ff9fc4", skyMid: "#ffc9dd", skyHorizon: "#fff0e2", sun: "#fff0d2", cloud: "#fff6fb", cloudShade: "#e6bfd2", hillNear: "#6fbb5f", hillFar: "#a3d18b", mountain: "#c8b4cf", flower: "#fff2a8", accent: "#ff4fa4" },
-    { name: "golden sunset",skyTop: "#ff9f66", skyMid: "#ffca86", skyHorizon: "#fff2c8", sun: "#fff2c0", cloud: "#fff3e8", cloudShade: "#e3b28c", hillNear: "#559b4b", hillFar: "#84bd6c", mountain: "#bb9c88", flower: "#fff0a0", accent: "#ff7d54" },
-    { name: "lavender dusk",skyTop: "#8f7ad2", skyMid: "#c2a7e6", skyHorizon: "#f2e4f6", sun: "#ffe6d2", cloud: "#f7f0fb", cloudShade: "#c6acd6", hillNear: "#5b9a6a", hillFar: "#8dbf9d", mountain: "#a99bc6", flower: "#fff0c4", accent: "#9b6bff" },
-    { name: "fresh morning",skyTop: "#4ec3bd", skyMid: "#a3e6d7", skyHorizon: "#ecfff7", sun: "#fff6d2", cloud: "#ffffff", cloudShade: "#c3e2d9", hillNear: "#66bd66", hillFar: "#97d091", mountain: "#a6c8c0", flower: "#fff2a8", accent: "#ff6fae" }
+    { key: "day",     name: "hyrule day",   skyTop: "#3fa4ef", skyMid: "#8fd0ff", skyHorizon: "#dcf1ff", sun: "#fff6d8", cloud: "#ffffff", cloudShade: "#c7dcee", hillNear: "#5fb552", hillFar: "#93cf7e", mountain: "#a7c3d8", flower: "#fff2a8", accent: "#ff5fae" },
+    { key: "dawn",    name: "dawn blush",   skyTop: "#ff9fc4", skyMid: "#ffc9dd", skyHorizon: "#fff0e2", sun: "#fff0d2", cloud: "#fff6fb", cloudShade: "#e6bfd2", hillNear: "#6fbb5f", hillFar: "#a3d18b", mountain: "#c8b4cf", flower: "#fff2a8", accent: "#ff4fa4" },
+    { key: "sunset",  name: "golden sunset",skyTop: "#ff9f66", skyMid: "#ffca86", skyHorizon: "#fff2c8", sun: "#fff2c0", cloud: "#fff3e8", cloudShade: "#e3b28c", hillNear: "#559b4b", hillFar: "#84bd6c", mountain: "#bb9c88", flower: "#fff0a0", accent: "#ff7d54" },
+    { key: "dusk",    name: "lavender dusk",skyTop: "#8f7ad2", skyMid: "#c2a7e6", skyHorizon: "#f2e4f6", sun: "#ffe6d2", cloud: "#f7f0fb", cloudShade: "#c6acd6", hillNear: "#5b9a6a", hillFar: "#8dbf9d", mountain: "#a99bc6", flower: "#fff0c4", accent: "#9b6bff" },
+    { key: "morning", name: "fresh morning",skyTop: "#4ec3bd", skyMid: "#a3e6d7", skyHorizon: "#ecfff7", sun: "#fff6d2", cloud: "#ffffff", cloudShade: "#c3e2d9", hillNear: "#66bd66", hillFar: "#97d091", mountain: "#a6c8c0", flower: "#fff2a8", accent: "#ff6fae" }
   ];
 
   const GOALS = ["rainbow", "castle", "sun", "bigstar"];
@@ -78,9 +80,13 @@
   const DEFAULTS = { animal: "pig", song: "random", sky: "random", length: "medium", flying: "easy", sound: "on" };
   const LENGTHS = { short: 1500, medium: 2600, long: 4200 };
   const FLYING = { easy: { g: 440, f: 470 }, normal: { g: 600, f: 450 } };
-  const SKY_BY_NAME = { day: 0, dawn: 1, sunset: 2, dusk: 3, morning: 4 };
   let settings = { ...DEFAULTS };
-  try { settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem("piggy-settings") || "{}") }; } catch (e) {}
+  try {
+    settings = { ...DEFAULTS, ...JSON.parse(localStorage.getItem("piggy-settings") || "{}") };
+    // migrate the flyer choice saved by older builds under a separate key
+    const oldAnimal = localStorage.getItem("piggy-animal");
+    if (oldAnimal && ANIMALS[oldAnimal] && !localStorage.getItem("piggy-settings")) settings.animal = oldAnimal;
+  } catch (e) {}
 
   let selectedAnimal = "pig";
 
@@ -88,7 +94,12 @@
     try { localStorage.setItem("piggy-settings", JSON.stringify(settings)); } catch (e) {}
   }
 
-  // Apply the current settings to the game knobs.
+  // Resolve the settings sky ("random" or a palette key) to a palette object.
+  function resolveSky(sel) {
+    return PALETTES.find((p) => p.key === sel) || pick(PALETTES);
+  }
+
+  // Apply the current settings to every game knob (single source of truth).
   function applySettings() {
     selectedAnimal = ANIMALS[settings.animal] ? settings.animal : "pig";
     TARGET = LENGTHS[settings.length] || LENGTHS.medium;
@@ -118,9 +129,7 @@
 
   // ---------------------------------------------------------------- adventure
   function newAdventure() {
-    pal = (settings.sky !== "random" && SKY_BY_NAME[settings.sky] != null)
-      ? PALETTES[SKY_BY_NAME[settings.sky]]
-      : pick(PALETTES);
+    pal = resolveSky(settings.sky);
     goalType = pick(GOALS);
     audio.randomizeKey();
     audio.setSong(settings.song);
@@ -220,8 +229,8 @@
   window.addEventListener("mouseup", onUp);
 
   document.addEventListener("visibilitychange", () => {
-    if (document.hidden) { audio.stopMusic(); holding = false; }
-    else if (state === State.PLAY) { audio.resume(); audio.startMusic(); }
+    if (document.hidden) { holding = false; audio.noteUp(); } // release any held note
+    else if (state === State.PLAY) { audio.resume(); }
   });
 
   // ---------------------------------------------------------------- buttons
@@ -231,8 +240,6 @@
     applySettings();
     newAdventure();
     state = State.PLAY;
-    audio.stopMusic();
-    audio.startMusic();
     document.getElementById("start").classList.add("hidden");
     document.getElementById("win").classList.add("hidden");
   }
@@ -261,17 +268,14 @@
         settings[key] = chip.dataset.value;
         saveSettings();
         refreshChips();
-        applySettings();
-        audio.init(); // a tap is a user gesture -> unlock audio
+        applySettings();        // single source of truth (animal, length, flying, sound/mute)
+        audio.init();           // a tap is a user gesture -> unlock audio
         // live feedback in the start-screen preview
-        if (key === "sky") {
-          pal = (settings.sky !== "random" && SKY_BY_NAME[settings.sky] != null)
-            ? PALETTES[SKY_BY_NAME[settings.sky]] : pick(PALETTES);
-        } else if (key === "song") {
-          audio.resume(); audio.previewSong(settings.song);
-        } else if (key === "sound") {
-          audio.setMuted(settings.sound === "off");
-          if (settings.sound === "on") { audio.resume(); audio.previewSong(settings.song); }
+        if (key === "sky") pal = resolveSky(settings.sky);
+        // play a taste of the song (unless the pick just muted everything)
+        if ((key === "song" || key === "sound") && settings.sound === "on") {
+          audio.resume();
+          audio.previewSong(settings.song);
         }
       });
     });
@@ -411,20 +415,30 @@
     return "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
   }
 
-  function drawSky() {
-    const g = ctx.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, pal.skyTop);
-    g.addColorStop(0.55, pal.skyMid);
-    g.addColorStop(1, pal.skyHorizon);
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, W, H);
-    // warm sun glow high in the sky (ambient light, fixed on screen)
+  // Sky gradients depend only on the palette + viewport size, so build them once
+  // and reuse across frames (rebuilt when pal or W/H changes) instead of
+  // allocating two CanvasGradients + rgba strings every frame.
+  let skyCache = null;
+  function skyGradients() {
+    if (skyCache && skyCache.pal === pal && skyCache.w === W && skyCache.h === H) return skyCache;
+    const lin = ctx.createLinearGradient(0, 0, 0, H);
+    lin.addColorStop(0, pal.skyTop);
+    lin.addColorStop(0.55, pal.skyMid);
+    lin.addColorStop(1, pal.skyHorizon);
     const sx = W * 0.76, sy = H * 0.15, R = Math.max(W, H) * 0.95;
-    const rg = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
-    rg.addColorStop(0, rgba(pal.sun, 0.55));
-    rg.addColorStop(0.35, rgba(pal.sun, 0.14));
-    rg.addColorStop(1, rgba(pal.sun, 0));
-    ctx.fillStyle = rg;
+    const rad = ctx.createRadialGradient(sx, sy, 0, sx, sy, R);
+    rad.addColorStop(0, rgba(pal.sun, 0.55));
+    rad.addColorStop(0.35, rgba(pal.sun, 0.14));
+    rad.addColorStop(1, rgba(pal.sun, 0));
+    skyCache = { pal, w: W, h: H, lin, rad };
+    return skyCache;
+  }
+
+  function drawSky() {
+    const sk = skyGradients();
+    ctx.fillStyle = sk.lin;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = sk.rad;   // warm sun glow (ambient light, fixed on screen)
     ctx.fillRect(0, 0, W, H);
   }
 
@@ -689,6 +703,7 @@
   }
 
   // The star of the show: the chosen animal, with little flapping wings.
+  let bodyGradCache = null;   // cached radial body gradient, keyed by animal
   function drawCharacter() {
     const cfg = ANIMALS[selectedAnimal] || ANIMALS.pig;
     const x = pig.x;
@@ -734,11 +749,16 @@
 
     drawEars(cfg);
 
-    // body/head — cel shading: light comes from upper-left, dark outline
-    const grad = ctx.createRadialGradient(-15, -16, 6, 0, 2, 54);
-    grad.addColorStop(0, cfg.grad[0]);
-    grad.addColorStop(1, cfg.grad[1]);
-    ctx.fillStyle = grad;
+    // body/head — cel shading: light comes from upper-left, dark outline.
+    // Gradient coords are fixed in the character's local space (ctx is
+    // translated), so cache it per-animal instead of rebuilding each frame.
+    if (!bodyGradCache || bodyGradCache.animal !== selectedAnimal) {
+      const bg = ctx.createRadialGradient(-15, -16, 6, 0, 2, 54);
+      bg.addColorStop(0, cfg.grad[0]);
+      bg.addColorStop(1, cfg.grad[1]);
+      bodyGradCache = { animal: selectedAnimal, grad: bg };
+    }
+    ctx.fillStyle = bodyGradCache.grad;
     ctx.beginPath(); ctx.ellipse(0, 0, 42, 38, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = cfg.outline; ctx.lineWidth = 2.5;
     ctx.beginPath(); ctx.ellipse(0, 0, 42, 38, 0, 0, TAU); ctx.stroke();
